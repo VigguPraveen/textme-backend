@@ -5,6 +5,9 @@ const cors = require('cors')
 const bcrypt = require('bcrypt')
 const path = require('path')
 const multer = require('multer')
+const fs = require('fs');
+const pg = require('pg');
+const url = require('url');
 const saltRounds = 10;
 
 var app = express()
@@ -28,17 +31,34 @@ const upload = multer({
 })
 
 
-var mysqlConnection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'Vbest@787898',
-    database: 'textme',
+// var mysqlConnection = mysql.createConnection({
+//     host: 'localhost',
+//     user: 'root',
+//     password: 'Vbest@787898',
+//     database: 'textme',
+//     multipleStatements: true,
+//     connectionLimit: 10,
+
+// })
+
+// mysqlConnection.connect((err) => {
+//     if (!err) {
+//         console.log("connection established successfully")
+//     } else {
+//         console.log("connection failed")
+//         console.log(JSON.stringify(err))
+//     }
+// })
+const mySqlConnection = mysql.createConnection({
+    host: 'sql12.freemysqlhosting.net',
+    user: 'sql12659956',
+    password: 'vKQS4UWqSL',
+    database: 'sql12659956',
     multipleStatements: true,
     connectionLimit: 10,
-
 })
 
-mysqlConnection.connect((err) => {
+mySqlConnection.connect((err) => {
     if (!err) {
         console.log("connection established successfully")
     } else {
@@ -47,11 +67,11 @@ mysqlConnection.connect((err) => {
     }
 })
 
-const port = 8000;
+const port = 9898;
 
 app.listen(port, () => console.log(`listening on port ${port}`))
 
-
+let mobile_number;
 // apis
 
 // register user
@@ -65,7 +85,7 @@ app.post('/registerUser', (req, res) => {
         bcrypt.hash(enteredPassword, salt, function (err, hash) {
             console.log(hash)
             const sql = `INSERT INTO register(username, mNumber, user_password) VALUES ('${name}', '${mNumber}', '${hash}')`;
-            mysqlConnection.query(sql, function (err, result) {
+            mySqlConnection.query(sql, function (err, result) {
                 if (err) throw err;
                 console.log('1 row inserted', result);
                 res.send(result);
@@ -81,7 +101,7 @@ app.post('/login', async (req, res) => {
     const enteredPassword = req.body.password;
     let storedPassword;
     const sql = `SELECT * from register where mNumber='${enteredNumber}'`;
-    mysqlConnection.query(sql, async function (err, result) {
+    mySqlConnection.query(sql, async function (err, result) {
         if (err) {
             res.send(err)
         }
@@ -103,10 +123,10 @@ app.post('/login', async (req, res) => {
 app.post('/addContact', async (req, res) => {
     const personANumber = req.body.personANumber
     const personBNumber = req.body.personBNumber;
-    const personBName = req.body.personBName
+    const personBName = req.body.personBName;
+    let profileimage;
     const searchQuerySql = `SELECT * from register where mNumber='${personBNumber}'`;
-    const addContactQuerySql = `INSERT INTO contact (personA, personB, name) VALUES ('${personANumber}', '${personBNumber}', '${personBName}')`
-    mysqlConnection.query(searchQuerySql, function (err, result) {
+    mySqlConnection.query(searchQuerySql, function (err, result) {
         console.log("main result", typeof result)
         if (err) {
             throw err;
@@ -114,8 +134,10 @@ app.post('/addContact', async (req, res) => {
         else if (result.length === 0) {
             res.send("The entered number is unavailable in textme")
         } else if (result.length > 0) {
+            profileimage = result[0].image
             setTimeout(() => {
-                mysqlConnection.query(addContactQuerySql, function (err, result) {
+                const addContactQuerySql = `INSERT INTO contact (personA, personB, name, profileimage) VALUES ('${personANumber}', '${personBNumber}', '${personBName}','${profileimage}')`
+                mySqlConnection.query(addContactQuerySql, function (err, result) {
                     if (err) throw err
                     res.send(result)
                 })
@@ -128,11 +150,10 @@ app.post('/addContact', async (req, res) => {
 
 // get request to get all contacts
 
-app.post('/getAllContacts', (req, res) => {
-    const personANumber = req.body.personANumber
-    const sql = `SELECT * FROM contact where personA = '${personANumber}'`;
-
-    mysqlConnection.query(sql, function (err, result) {
+app.get('/getAllContacts', (req, res) => {
+    console.log(mobile_number)
+    const sql = `SELECT * FROM contact where personA = '${mobile_number}'`;
+    mySqlConnection.query(sql, function (err, result) {
         if (err) throw err;
         res.send(result);
     })
@@ -141,36 +162,46 @@ app.post('/getAllContacts', (req, res) => {
 // get request to get all chatting friends list
 app.post('/getAllChatters', (req, res) => {
     const personANumber = req.body.personANumber
-    
+
     const sql = `SELECT * FROM contact where personA = '${personANumber}' && chatInit= '1'`;
 
-    mysqlConnection.query(sql, function (err, result) {
+    mySqlConnection.query(sql, function (err, result) {
         if (err) throw err;
         res.send(result);
     })
 })
 //set mobile number
-let mobile_number;
+
 app.post('/setNumber', (req, res) => {
-    if(req.body.mobile_number)
+    if (req.body.mobile_number)
         mobile_number = req.body.mobile_number
     res.send('OK')
-    
+
 })
 //set profile picture
-app.post('/setProfileImage',upload.single('image'), (req, res) => {
-    // const image = req.body.image
-    // const mobile_number = req.body.mobile_number
-    // console.log("requestbody" , req.body)
+app.post('/setProfileImage', upload.single('image'), (req, res) => {
+
     console.log(req.file)
     const image = req.file.filename
-    
-    const sql = `UPDATE register SET image='${image}' where mNumber='${mobile_number}'`;
 
-    mysqlConnection.query(sql, function (err, result) {
+    const sql = `UPDATE register SET image='${image}' where mNumber='${mobile_number}'`;
+    const updateContactTableQuery = `UPDATE contact SET profileimage='${image}' where personB='${mobile_number}'`
+    const updateChatTableQuery = `UPDATE chat SET profileimage='${image}' where personB='${mobile_number}'`
+
+    mySqlConnection.query(sql, function (err, result) {
         if (err) throw err;
         res.send(result);
     })
+
+    mySqlConnection.query(updateContactTableQuery, function (err, result) {
+        if (err) throw err;
+        res.send(result);
+    })
+    mySqlConnection.query(updateChatTableQuery, function (err, result) {
+        if (err) throw err;
+        res.send(result);
+    })
+
 })
 
 // get profile Details
@@ -178,9 +209,72 @@ app.post('/setProfileImage',upload.single('image'), (req, res) => {
 app.get('/getProfile', (req, res) => {
     const sql = `SELECT * FROM register where mNumber = '${mobile_number}'`;
 
-    mysqlConnection.query(sql, function (err, result) {
+    mySqlConnection.query(sql, function (err, result) {
         if (err) throw err;
         res.send(result[0]);
+    })
+})
+
+// post chats
+
+app.post('/sendChat', (req, res) => {
+    console.log(req.body)
+    const { date, personA, personB, chats, personBName } = req.body
+
+    let personBProfileImage;
+
+    const getQuery = `SELECT * FROM contact where personB='${personB}'`
+    mySqlConnection.query(getQuery, function (err, result) {
+        if (err) throw err;
+        res.send("ok");
+        personBProfileImage = result[0].profileimage
+    })
+    setTimeout(() => {
+        const sql = `INSERT INTO chat(chatdate, personA, personB, chats, name, profileimage) VALUES ('${date}', '${personA}', '${personB}','${chats}', '${personBName}', '${personBProfileImage}' )`;
+        mySqlConnection.query(sql, function (err, result) {
+            if (err) throw err;
+            res.send(result[0]);
+        })
+    }, 500)
+
+})
+
+app.get('/getChat', (req, res) => {
+    const sql = `SELECT * from chat where personA='${mobile_number}'`
+    mySqlConnection.query(sql, function (err, result) {
+        if (err) throw err;
+        res.send(result);
+    })
+})
+
+app.post('/getOnePersonChat', (req, res) => {
+
+    const { personBNumber } = req.body
+    const sql = `SELECT * from chat where personA='${mobile_number}' AND personB='${personBNumber}' OR personB='${mobile_number}' AND personA='${personBNumber}'`
+    mySqlConnection.query(sql, function (err, result) {
+        if (err) throw err;
+        res.send(result);
+    })
+})
+
+app.post('/updateTypingStatus', (req, res) => {
+    const { personANumber, personBNumber, status } = req.body
+
+    const sql = `UPDATE contact SET chatStatus = '${status}' where personA='${personANumber}' AND personB='${personBNumber}'`
+    mySqlConnection.query(sql, function (err, result) {
+        if (err) throw err;
+        res.send(result);
+    })
+})
+
+app.post('/getTypingStatus', (req, res) => {
+    const { personBNumber } = req.body
+
+    const sql = `SELECT * from contact where personA='${personBNumber}' AND personB='${mobile_number}'`
+    mySqlConnection.query(sql, function (err, result) {
+        if (err) throw err;
+        res.send(result);
+        console.log(result)
     })
 })
 
