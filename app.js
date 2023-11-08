@@ -5,9 +5,6 @@ const cors = require('cors')
 const bcrypt = require('bcrypt')
 const path = require('path')
 const multer = require('multer')
-const fs = require('fs');
-const pg = require('pg');
-const url = require('url');
 const saltRounds = 10;
 
 var app = express()
