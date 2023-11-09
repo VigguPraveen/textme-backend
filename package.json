@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node ./functions/api",
-    "dev": "nodemon ./functions/api",
+    "start": "node app",
+    "dev": "nodemon app",
     "build": "netlify deploy --prod"
   },
   "keywords": [],

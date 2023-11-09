@@ -6,8 +6,6 @@ const bcrypt = require('bcrypt')
 const path = require('path')
 const multer = require('multer')
 const saltRounds = 10;
-const serverless = require('serverless-http');
-const router = express.Router();
 
 var app = express()
 
@@ -75,7 +73,7 @@ let mobile_number;
 
 // register user
 
-router.post('/registerUser', (req, res) => {
+app.post('/registerUser', (req, res) => {
     const { name, mNumber, password } = req.body
 
     const enteredPassword = password;
@@ -95,7 +93,7 @@ router.post('/registerUser', (req, res) => {
 
 // login user
 
-router.post('/login', async (req, res) => {
+app.post('/login', async (req, res) => {
     const enteredNumber = req.body.mobile_number;
     const enteredPassword = req.body.password;
     let storedPassword;
@@ -114,12 +112,14 @@ router.post('/login', async (req, res) => {
             } else {
                 res.send("Access Denied")
             }
+        } else {
+            res.send("Invalid Credentials")
         }
     })
 })
 // add contact
 
-router.post('/addContact', async (req, res) => {
+app.post('/addContact', async (req, res) => {
     const personANumber = req.body.personANumber
     const personBNumber = req.body.personBNumber;
     const personBName = req.body.personBName;
@@ -149,7 +149,7 @@ router.post('/addContact', async (req, res) => {
 
 // get request to get all contacts
 
-router.get('/getAllContacts', (req, res) => {
+app.get('/getAllContacts', (req, res) => {
     console.log(mobile_number)
     const sql = `SELECT * FROM contact where personA = '${mobile_number}'`;
     mySqlConnection.query(sql, function (err, result) {
@@ -158,7 +158,7 @@ router.get('/getAllContacts', (req, res) => {
     })
 })
 
-router.get('./getFullContacts', (req, res) => {
+app.get('./getFullContacts', (req, res) => {
     const sql = `SELECT * FROM contact`
       mySqlConnection.query(sql, function (err, result) {
         if (err) throw err;
@@ -167,7 +167,7 @@ router.get('./getFullContacts', (req, res) => {
 })
 
 // get request to get all chatting friends list
-router.post('/getAllChatters', (req, res) => {
+app.post('/getAllChatters', (req, res) => {
     const personANumber = req.body.personANumber
 
     const sql = `SELECT * FROM contact where personA = '${personANumber}' && chatInit= '1'`;
@@ -179,14 +179,14 @@ router.post('/getAllChatters', (req, res) => {
 })
 //set mobile number
 
-router.post('/setNumber', (req, res) => {
+app.post('/setNumber', (req, res) => {
     if (req.body.mobile_number)
         mobile_number = req.body.mobile_number
     res.send('OK')
 
 })
 //set profile picture
-router.post('/setProfileImage', upload.single('image'), (req, res) => {
+app.post('/setProfileImage', upload.single('image'), (req, res) => {
 
     console.log(req.file)
     const image = req.file.filename
@@ -213,7 +213,7 @@ router.post('/setProfileImage', upload.single('image'), (req, res) => {
 
 // get profile Details
 
-router.get('/getProfile', (req, res) => {
+app.get('/getProfile', (req, res) => {
     const sql = `SELECT * FROM register where mNumber = '${mobile_number}'`;
 
     mySqlConnection.query(sql, function (err, result) {
@@ -224,7 +224,7 @@ router.get('/getProfile', (req, res) => {
 
 // post chats
 
-router.post('/sendChat', (req, res) => {
+app.post('/sendChat', (req, res) => {
     console.log(req.body)
     const { date, personA, personB, chats, personBName } = req.body
 
@@ -246,7 +246,7 @@ router.post('/sendChat', (req, res) => {
 
 })
 
-router.get('/getChat', (req, res) => {
+app.get('/getChat', (req, res) => {
     const sql = `SELECT * from chat where personA='${mobile_number}'`
     mySqlConnection.query(sql, function (err, result) {
         if (err) throw err;
@@ -254,7 +254,7 @@ router.get('/getChat', (req, res) => {
     })
 })
 
-router.post('/getOnePersonChat', (req, res) => {
+app.post('/getOnePersonChat', (req, res) => {
 
     const { personBNumber } = req.body
     const sql = `SELECT * from chat where personA='${mobile_number}' AND personB='${personBNumber}' OR personB='${mobile_number}' AND personA='${personBNumber}'`
@@ -264,7 +264,7 @@ router.post('/getOnePersonChat', (req, res) => {
     })
 })
 
-router.post('/updateTypingStatus', (req, res) => {
+app.post('/updateTypingStatus', (req, res) => {
     const { personANumber, personBNumber, status } = req.body
 
     const sql = `UPDATE contact SET chatStatus = '${status}' where personA='${personANumber}' AND personB='${personBNumber}'`
@@ -274,7 +274,7 @@ router.post('/updateTypingStatus', (req, res) => {
     })
 })
 
-router.post('/getTypingStatus', (req, res) => {
+app.post('/getTypingStatus', (req, res) => {
     const { personBNumber } = req.body
 
     const sql = `SELECT * from contact where personA='${personBNumber}' AND personB='${mobile_number}'`
@@ -285,5 +285,5 @@ router.post('/getTypingStatus', (req, res) => {
     })
 })
 
-app.use('/.netlify/functions/api', router);
-module.exports.handler = serverless(app);
+// app.use('/.netlify/functions/api', router);
+// module.exports.handler = serverless(app);
