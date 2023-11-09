@@ -1,2 +1,4 @@
 node_modules
-lockfile
+functions
+# Local Netlify folder
+.netlify
