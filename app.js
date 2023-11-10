@@ -112,8 +112,6 @@ app.post('/login', async (req, res) => {
             } else {
                 res.send("Access Denied")
             }
-        } else {
-            res.send("Invalid Credentials")
         }
     })
 })
@@ -153,14 +151,6 @@ app.get('/getAllContacts', (req, res) => {
     console.log(mobile_number)
     const sql = `SELECT * FROM contact where personA = '${mobile_number}'`;
     mySqlConnection.query(sql, function (err, result) {
-        if (err) throw err;
-        res.send(result);
-    })
-})
-
-app.get('./getFullContacts', (req, res) => {
-    const sql = `SELECT * FROM contact`
-      mySqlConnection.query(sql, function (err, result) {
         if (err) throw err;
         res.send(result);
     })
@@ -285,5 +275,3 @@ app.post('/getTypingStatus', (req, res) => {
     })
 })
 
-// app.use('/.netlify/functions/api', router);
-// module.exports.handler = serverless(app);
